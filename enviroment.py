@@ -3,6 +3,7 @@ import random
 import queue
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import skimage.io, skimage.feature, skimage.transform, skimage.draw, skimage.morphology, skimage.color, skimage.filters
 
 
@@ -202,6 +203,7 @@ class GridEnv(MazeBase, SmartNpc):
         if allow_control:
             self._fig.canvas.mpl_connect('key_press_event', self._handler_keydown)
         self._ax1, self._ax2, self._ax3 = plt.subplot(121), plt.subplot(222), plt.subplot(224)
+        self._ax3d = Axes3D(plt.figure(figsize=(12, 9)))
         plt.tight_layout()
 
         # variable for training
@@ -280,13 +282,25 @@ class GridEnv(MazeBase, SmartNpc):
         state_init, _, _, _ = self.step(action=None)
         return state_init
 
-    def render(self, pause=1.0):
+    def render(self, pause=1.0, mode='2d'):
         self._update_img()
+
+        # 2d grid map
         self._ax1.imshow(self._img)
         if self._slide_window is not None:
             self._ax2.imshow(self._slide_window, cmap='Greys')
         if self._circle_view is not None:
             self._ax3.imshow(self._circle_view, cmap='Greys')
+
+        # 3d surface map
+        image = skimage.transform.rescale(self._maze, scale=0.5) > 0.8
+        h, w = image.shape
+
+        x, y = np.arange(0, w, 1), np.arange(0, h, 1)
+        x, y = np.meshgrid(x, y)
+        self._ax3d.plot_surface(x, y, image, rstride=1, cstride=1, cmap='brg', alpha=1.0)
+        self._ax3d.set_zlim3d(top=10)
+
         plt.pause(pause)
 
     def _handler_keydown(self, event):
@@ -396,7 +410,7 @@ def test_env_2():
     env.reset()
     for _ in range(1000):
         env.step_follow_path()
-        env.render()
+        env.render(mode='3d')
 
 
 if __name__ == '__main__':
